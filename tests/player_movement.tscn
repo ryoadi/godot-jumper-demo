@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3 uid="uid://cpxvqud34gt56"]
+
+[ext_resource type="PackedScene" uid="uid://nkgytfkunccm" path="res://scenes/player.tscn" id="1_mdmvr"]
+
+[sub_resource type="SegmentShape2D" id="SegmentShape2D_12wkm"]
+a = Vector2(-6.3999996, -0.19999999)
+b = Vector2(233.99998, -0.39999998)
+
+[node name="PlayerMovement" type="Node"]
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+position = Vector2(8, 599)
+metadata/_edit_group_ = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+scale = Vector2(5, 5)
+shape = SubResource("SegmentShape2D_12wkm")
+
+[node name="Line2D" type="Line2D" parent="StaticBody2D"]
+points = PackedVector2Array(-16, 0, 1159, -1)
+
+[node name="Player" parent="." instance=ExtResource("1_mdmvr")]
+position = Vector2(282, 378)
