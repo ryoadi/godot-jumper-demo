@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://cpxvqud34gt56"]
 
-[ext_resource type="PackedScene" uid="uid://nkgytfkunccm" path="res://scenes/player.tscn" id="1_mdmvr"]
+[ext_resource type="PackedScene" uid="uid://nkgytfkunccm" path="res://scenes/player.bak.tscn" id="1_mdmvr"]
 
 [sub_resource type="SegmentShape2D" id="SegmentShape2D_12wkm"]
 a = Vector2(-6.3999996, -0.19999999)

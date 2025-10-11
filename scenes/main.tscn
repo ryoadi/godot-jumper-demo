@@ -1,0 +1,84 @@
+[gd_scene load_steps=5 format=3 uid="uid://gwcketf6ntis"]
+
+[ext_resource type="PackedScene" uid="uid://dfymgkljymubx" path="res://scenes/platform_manager.tscn" id="1_o5qli"]
+
+[sub_resource type="GDScript" id="GDScript_lbhrr"]
+resource_name = "Main"
+script/source = "class_name Main extends Node
+
+enum GameState {
+	Menu,
+	Play,
+	GameOver,
+}
+@onready var state: GameState = GameState.Play:
+	set(value):
+		# handle exit state
+		match state:
+			GameState.Menu:
+				$MenuUI.hide()
+			GameState.Play:
+				pass
+			GameState.GameOver:
+				$GameOverUI.hide()
+		
+		# handle enter state
+		match value:
+			GameState.Menu:
+				$MenuUI.show()
+				$Game.preview()
+			GameState.Play:
+				$Game.start()
+			GameState.GameOver:
+				$GameOverUI.show()
+			
+		# update state
+		state = value
+"
+
+[sub_resource type="GDScript" id="GDScript_0wfyh"]
+resource_name = "Game"
+script/source = "extends Node
+
+## Start a game.
+func start() -> void:
+	$GameUI.show()
+	$Platforms.reset()
+	$Player.spawn()
+	
+# Preview the game.
+func preview() -> void:
+	$GameUI.hide()
+	$Platforms.reset()
+	$Platforms.is_moving = true
+	$Player.remove()
+"
+
+[sub_resource type="GDScript" id="GDScript_o5qli"]
+resource_name = "Player"
+script/source = "extends Node
+
+func spawn() -> void:
+	global_position = $SpawnMarker.global_position
+"
+
+[node name="Main" type="Node"]
+script = SubResource("GDScript_lbhrr")
+
+[node name="MenuUI" type="Node" parent="."]
+
+[node name="Game" type="Node" parent="."]
+script = SubResource("GDScript_0wfyh")
+
+[node name="GameUI" type="Node" parent="Game"]
+
+[node name="PlatformManager" parent="Game" instance=ExtResource("1_o5qli")]
+
+[node name="PlayerManager" type="Node" parent="Game"]
+script = SubResource("GDScript_o5qli")
+
+[node name="SpawnMarker" type="Marker2D" parent="Game/PlayerManager"]
+top_level = true
+position = Vector2(576, 512)
+
+[node name="GameOverUI" type="Node" parent="."]

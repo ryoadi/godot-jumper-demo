@@ -1,237 +1,160 @@
-[gd_scene load_steps=3 format=3 uid="uid://l8fkbpq05e6"]
+[gd_scene load_steps=4 format=3 uid="uid://dfymgkljymubx"]
 
-[ext_resource type="PackedScene" uid="uid://sbt8r6ckfb54" path="res://scenes/platform.tscn" id="1_133ji"]
+[ext_resource type="PackedScene" uid="uid://sbt8r6ckfb54" path="res://scenes/platform.tscn" id="1_byowd"]
 
 [sub_resource type="GDScript" id="GDScript_iywne"]
 resource_name = "PlatformManager"
-script/source = "extends Node2D
+script/source = "class_name PlatformManager extends Node
 
-# Platform scene to spawn
+## Platform scene to spawn.
 @export var platform_scene: PackedScene
 
-# Spawn settings
-@export var initial_spawn_count: int = 8
-@export var spawn_y_spacing_min: float = 150.0
-@export var spawn_y_spacing_max: float = 250.0
-@export var platform_width: float = 120.0
-@export var screen_margin: float = 60.0  # Keep platforms away from edges
+## Should the platforms moving.
+var is_moving: bool = false:
+	set(value):
+		is_moving = value
+		match value:
+			true: $SpeedupTimer.start()
+			false: $SpeedupTimer.stop()
 
-# Starting platform settings
-@export var starting_platform_width: float = 400.0  # Wide starting platform
-@export var starting_platform_y: float = 550.0  # Bottom of screen
+# Platform placement
+@export var _initial_speed: float = 50
+@export var _increased_speed: float = 5
 
-# Scrolling settings
-@export var base_scroll_speed: float = 50.0
-@export var speed_increase_rate: float = 0.5  # Speed increase per 100 height units
-@export var max_scroll_speed: float = 300.0
+@onready var _platform_gap: float = $SpawnActivator.global_position.y
+@onready var _speed: float = _initial_speed
 
-# State tracking
-var current_scroll_speed: float = 0.0  # Start at 0, will activate later
-var highest_platform_y: float = 0.0
-var screen_width: float = 0.0
-var screen_height: float = 0.0
-var spawn_threshold: float = 200.0  # Spawn new platform when camera is this close
-var scrolling_active: bool = false  # Platforms don't move until player leaves first platform
+# first platform
+var _first_platform: StaticBody2D
 
-# Platform pool
-var active_platforms: Array[StaticBody2D] = []
-var platform_pool: Array[StaticBody2D] = []
-var starting_platform: StaticBody2D = null
-
-# Reference to camera (will be set externally)
-var game_camera: Camera2D
-
-# Signals
-signal scrolling_started
-
-func _ready() -> void:
-	screen_width = get_viewport_rect().size.x
-	screen_height = get_viewport_rect().size.y
-	current_scroll_speed = 0.0
-	scrolling_active = false
-	
-	# Spawn initial platforms
-	call_deferred(\"spawn_initial_platforms\")
-
-func _process(delta: float) -> void:
-	# Only update if scrolling is active
-	if scrolling_active:
-		# Update scroll speed for all platforms
-		update_platform_speeds()
+## Mark 
+#var current_platform: StaticBody2D = null:
+	#set(new_platform):
+		#if new_platform == current_platform:
+			#return
+		#
+		#if new_platform != _first_platform:
+			#is_moving = true
+		#
+		#emit_signal('current_platform_changed', new_platform, current_platform)
+		#current_platform = new_platform
 		
-		# Check if we need to spawn new platforms
-		if game_camera:
-			var camera_top = game_camera.global_position.y - screen_height / 2
-			if highest_platform_y > camera_top - spawn_threshold:
-				spawn_platform()
+## signal
+#signal current_platform_changed(
+	#new_platform: StaticBody2D,
+	#old_platform: StaticBody2D,
+#)
 
-func spawn_initial_platforms() -> void:
-	# 1. Spawn the wide starting platform at bottom (stationary)
-	starting_platform = spawn_starting_platform()
+## Prepare platforms to start a game.
+func reset() -> void:
+	# reset values
+	get_tree().call_group('platforms', 'queue_free')
+	is_moving = false
+	$Lanes.reset()
+	_speed = _initial_speed
 	
-	# 2. Spawn regular platforms above
-	highest_platform_y = starting_platform_y - 100  # Start above the starting platform
-	
-	for i in range(initial_spawn_count - 1):  # -1 because starting platform counts
-		var spacing = randf_range(spawn_y_spacing_min, spawn_y_spacing_max)
-		highest_platform_y -= spacing
-		spawn_platform_at(get_random_x_position(), highest_platform_y)
+	# (re)spawn platforms
+	# 1st platform in the defined position
+	_first_platform = _spawn_platform($FirstPlatformMarker.global_position)
 
-func spawn_starting_platform() -> StaticBody2D:
-	if not platform_scene:
-		push_error(\"Platform scene not assigned!\")
-		return null
+	# Spawn other platforms to fill up the screen
+	var platform_gap: float = $FirstPlatformMarker.global_position.y - _platform_gap
+	while platform_gap > 0:
+		_spawn_platform(Vector2($Lanes.next_lane.x, platform_gap))
+		platform_gap -= _platform_gap
+		
+# spawn single platform. 
+# default to randomly marked x position, top screen
+func _spawn_platform(
+	spawn_position: Vector2 = $Lanes.next_lane
+) -> StaticBody2D:
+	assert(platform_scene, 'Platform scene not assigned!')
 	
 	var platform: StaticBody2D = platform_scene.instantiate()
+	platform.global_position = spawn_position
+	platform.set_meta('new', true)
+	platform.add_to_group('platforms')
 	add_child(platform)
 	
-	# Center it on screen
-	var x_pos = screen_width / 2
-	platform.global_position = Vector2(x_pos, starting_platform_y)
-	
-	# Make it wider (modify the collision shape and visual)
-	var collision_shape = platform.get_node_or_null(\"CollisionShape\")
-	if collision_shape and collision_shape.shape:
-		collision_shape.shape.size.x = starting_platform_width
-	
-	var visual = platform.get_node_or_null(\"Visual\")
-	if visual:
-		visual.size.x = starting_platform_width
-		visual.position.x = -starting_platform_width / 2
-	
-	# Set initial speed to 0
-	if platform.has_method(\"set_scroll_speed\"):
-		platform.set_scroll_speed(0.0)
-	
-	platform.connect(\"platform_left_screen\", _on_platform_left_screen.bind(platform))
-	active_platforms.append(platform)
-	
 	return platform
+	
+func _process(delta: float) -> void:
+	if is_moving:
+		get_tree().call_group('platforms', 'move_local_y', delta * _speed)
 
-func spawn_platform() -> void:
-	# Calculate next platform position
-	var spacing = randf_range(spawn_y_spacing_min, spawn_y_spacing_max)
-	highest_platform_y -= spacing
-	spawn_platform_at(get_random_x_position(), highest_platform_y)
+func _physics_process(delta: float) -> void:
+	var platform: StaticBody2D = $SpawnActivator.get_collider()
+	if platform and platform.has_meta('new'):
+		_spawn_platform()
+		platform.remove_meta('new')
 
-func spawn_platform_at(x: float, y: float) -> void:
-	var platform: StaticBody2D
-	
-	# Try to reuse from pool
-	if platform_pool.size() > 0:
-		platform = platform_pool.pop_back()
-		platform.visible = true
-		platform.global_position = Vector2(x, y)
-		
-		# Reset size to normal (in case it was the starting platform)
-		var collision_shape = platform.get_node_or_null(\"CollisionShape\")
-		if collision_shape and collision_shape.shape:
-			collision_shape.shape.size.x = platform_width
-		
-		var visual = platform.get_node_or_null(\"Visual\")
-		if visual:
-			visual.size.x = platform_width
-			visual.position.x = -platform_width / 2
-	else:
-		# Create new platform
-		if platform_scene:
-			platform = platform_scene.instantiate()
-			add_child(platform)
-			platform.connect(\"platform_left_screen\", _on_platform_left_screen.bind(platform))
-		else:
-			push_error(\"Platform scene not assigned to PlatformManager!\")
-			return
-	
-	# Initialize platform with current scroll speed
-	if platform.has_method(\"initialize\"):
-		platform.initialize(Vector2(x, y), current_scroll_speed if scrolling_active else 0.0)
-	
-	active_platforms.append(platform)
 
-func get_random_x_position() -> float:
-	# Generate random X position within screen bounds with margins
-	var min_x = screen_margin + platform_width / 2
-	var max_x = screen_width - screen_margin - platform_width / 2
-	return randf_range(min_x, max_x)
-
-func update_platform_speeds() -> void:
-	if not scrolling_active:
-		return
-	
-	# Calculate speed based on height reached
-	var height_factor = abs(highest_platform_y) / 1000.0
-	current_scroll_speed = min(base_scroll_speed + (height_factor * speed_increase_rate), max_scroll_speed)
-	
-	# Update all active platforms
-	for platform in active_platforms:
-		if platform.has_method(\"set_scroll_speed\"):
-			platform.set_scroll_speed(current_scroll_speed)
-
-func activate_scrolling() -> void:
-	if scrolling_active:
-		return  # Already activated
-	
-	scrolling_active = true
-	current_scroll_speed = base_scroll_speed
-	
-	# Start moving all platforms
-	for platform in active_platforms:
-		if platform.has_method(\"set_scroll_speed\"):
-			platform.set_scroll_speed(current_scroll_speed)
-	
-	emit_signal(\"scrolling_started\")
-	print(\"Platform scrolling activated!\")
-
-func check_player_left_starting_platform(player_y: float) -> void:
-	# Check if player has jumped up from starting platform
-	if not scrolling_active and starting_platform:
-		# If player is above the starting platform by a reasonable margin
-		if player_y < starting_platform_y - 50:
-			activate_scrolling()
-
-func _on_platform_left_screen(platform: StaticBody2D) -> void:
-	# Don't recycle the starting platform
-	if platform == starting_platform:
-		starting_platform = null
-	
-	# Remove from active list
-	var index = active_platforms.find(platform)
-	if index != -1:
-		active_platforms.remove_at(index)
-	
-	# Add to pool for reuse
-	platform.visible = false
-	platform_pool.append(platform)
-
-func update_difficulty(player_height: float) -> void:
-	# Optional: Called from main game to adjust difficulty
-	# Can modify spawn rates, spacing, etc.
-	pass
-
-func get_current_speed() -> float:
-	return current_scroll_speed
-
-func reset() -> void:
-	# Clear all platforms
-	for platform in active_platforms:
-		platform.queue_free()
-	for platform in platform_pool:
-		platform.queue_free()
-	
-	active_platforms.clear()
-	platform_pool.clear()
-	starting_platform = null
-	
-	# Reset state
-	current_scroll_speed = 0.0
-	highest_platform_y = 0.0
-	scrolling_active = false
-	
-	# Respawn initial platforms
-	call_deferred(\"spawn_initial_platforms\")
+func _on_speedup_timer_timeout() -> void:
+	_speed += _increased_speed
+	if _speed > 500:
+		$SpeedupTimer.stop()
 "
 
-[node name="PlatformManager" type="Node2D"]
+[sub_resource type="GDScript" id="GDScript_133ji"]
+resource_name = "PlatformLanes"
+script/source = "extends Node
+
+var _initial_lane: int = 2
+var _current_lane: int = _initial_lane
+@onready var _lanes: Array[Marker2D] = [
+	$Lane1,
+	$Lane2,
+	$Lane3,
+	$Lane4,
+	$Lane5,
+]
+
+var next_lane: Vector2:
+	get:
+		var _lane: int = _current_lane
+		match _lane:
+			0: _current_lane = randi_range(0, 2)
+			1: _current_lane = randi_range(0, 3)
+			2: _current_lane = randi_range(0, 4)
+			3: _current_lane = randi_range(1, 4)
+			_: _current_lane = randi_range(2, 4)
+		
+		return _lanes[_lane].global_position
+		
+func reset() -> void:
+	_current_lane = _initial_lane
+"
+
+[node name="PlatformManager" type="Node"]
 script = SubResource("GDScript_iywne")
-platform_scene = ExtResource("1_133ji")
+platform_scene = ExtResource("1_byowd")
 metadata/speed = 0.0
+
+[node name="Lanes" type="Node" parent="."]
+script = SubResource("GDScript_133ji")
+
+[node name="Lane1" type="Marker2D" parent="Lanes"]
+position = Vector2(192, 0)
+
+[node name="Lane2" type="Marker2D" parent="Lanes"]
+position = Vector2(384, 0)
+
+[node name="Lane3" type="Marker2D" parent="Lanes"]
+position = Vector2(576, 0)
+
+[node name="Lane4" type="Marker2D" parent="Lanes"]
+position = Vector2(768, 0)
+
+[node name="Lane5" type="Marker2D" parent="Lanes"]
+position = Vector2(960, 0)
+
+[node name="FirstPlatformMarker" type="Marker2D" parent="."]
+position = Vector2(576, 576)
+
+[node name="SpawnActivator" type="RayCast2D" parent="."]
+position = Vector2(0, 64)
+target_position = Vector2(1152, 0)
+
+[node name="SpeedupTimer" type="Timer" parent="."]
+
+[connection signal="timeout" from="SpeedupTimer" to="." method="_on_speedup_timer_timeout"]
