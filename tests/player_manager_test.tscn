@@ -1,13 +1,18 @@
-[gd_scene load_steps=4 format=3 uid="uid://cpxvqud34gt56"]
+[gd_scene load_steps=5 format=3 uid="uid://bjktgn68kjurv"]
 
-[ext_resource type="PackedScene" uid="uid://c4qo3nubwlfl5" path="res://scenes/player_manager.tscn" id="1_cgfxx"]
+[ext_resource type="Script" uid="uid://ba2t10n1ywvwl" path="res://scripts/player_manager.gd" id="1_cgfxx"]
+[ext_resource type="PackedScene" uid="uid://cr88trrnav8tr" path="res://scenes/player.tscn" id="2_1g8i0"]
 
 [sub_resource type="GDScript" id="GDScript_cgfxx"]
 resource_name = "PlayerManagerTest"
 script/source = "extends Node
 
-#func _ready() -> void:
-	#$PlayerManager.spawn()
+func _ready() -> void:
+	$Node.init($Player)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_released(\"ui_cancel\"):
+		$Node.spawn()
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_cgfxx"]
@@ -16,7 +21,11 @@ size = Vector2(834, 20)
 [node name="PlayerManagerTest" type="Node2D"]
 script = SubResource("GDScript_cgfxx")
 
-[node name="PlayerManager" parent="." instance=ExtResource("1_cgfxx")]
+[node name="Node" type="Node" parent="."]
+script = ExtResource("1_cgfxx")
+
+[node name="Player" parent="." instance=ExtResource("2_1g8i0")]
+position = Vector2(512, 448)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="."]
 
