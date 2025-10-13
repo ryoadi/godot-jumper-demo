@@ -9,8 +9,13 @@ script/source = "extends CharacterBody2D
 ## Movement speed.
 @export var speed: float = 300
 
-## Jump power.
-@export var jump_power: float = 300
+## Jump height
+@export var jump_height: float = 300
+
+## Jump time.
+@export var jump_time: float = 1
+
+@onready var _jump_power: float = _calculate_jump_power(jump_height, jump_time)
 
 ## Signal when player landed on a floor.
 signal landed
@@ -28,7 +33,10 @@ var _landed: bool = false:
 var _direction: Vector2 = Vector2.ZERO:
 	set(value):
 		_direction = value.normalized()
+		
 
+func _calculate_jump_power(height: float, time_to_peak: float) -> float:
+	return (2.0 * height) / pow(time_to_peak, 2.0)
 
 ## Move to a specific direction.
 func move(direction: Vector2) -> void:
@@ -46,19 +54,16 @@ func move_stop(direction: Vector2) -> void:
 ## Jump, if possible.
 func jump() -> void:
 	if _landed or not $CoyoteTimer.is_stopped():
-		velocity.y = -jump_power
+		velocity.y -= _jump_power
 		$CoyoteTimer.stop()
 
 func _process(delta: float) -> void:
-	velocity.x = speed * _direction.x
-	if not _landed:
-		velocity += delta * get_gravity()
-	if _landed:
-		velocity.y = min(300, velocity.y + 300) 
-	
 	move_and_slide()
 
 func _physics_process(delta: float) -> void:
+	velocity += get_gravity() * delta
+	velocity.x = speed * _direction.x
+	
 	_landed = is_on_floor()
 "
 
