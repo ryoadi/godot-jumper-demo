@@ -71,6 +71,7 @@ func _physics_process(delta: float) -> void:
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 2
+floor_snap_length = 10.0
 script = SubResource("GDScript_sugp2")
 metadata/_edit_group_ = true
 

@@ -8,8 +8,6 @@ script/source = "extends Node
 
 @onready var _initial_position: Vector2 = $Player.global_position
 
-@onready var player: CharacterBody2D = $Player
-
 # Record platform where to player stand. 
 var _current_platform: StaticBody2D:
 	set(new_platform):
@@ -37,7 +35,7 @@ signal player_fell_off
 ## (Re)spawn player at dedicated position
 func spawn() -> void:
 	$Player.global_position = _initial_position
-	$Player.process_mode = Node.PROCESS_MODE_INHERIT
+	$Player.process_mode = Node.PROCESS_MODE_PAUSABLE
 	$Player.show()
 
 

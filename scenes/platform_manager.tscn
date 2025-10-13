@@ -16,6 +16,7 @@ script/source = "class_name PlatformManager extends Node
 ## Should the platforms moving.
 var is_moving: bool = false:
 	set(value):
+		if is_moving == value: return
 		is_moving = value
 		match value:
 			true: $SpeedupTimer.start()
@@ -25,7 +26,10 @@ var is_moving: bool = false:
 @onready var _platform_gap: float = $SpawnActivator.global_position.y
 
 # Platform movement speed.
-@onready var _speed: float = _initial_speed
+@onready var _speed: float = _initial_speed:
+	set(value):
+		_speed = value
+		get_tree().call_group('platforms', 'set_constant_linear_velocity', _speed)
 
 # first platform
 var _first_platform: StaticBody2D
