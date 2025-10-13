@@ -1,13 +1,17 @@
-[gd_scene load_steps=4 format=3 uid="uid://dfymgkljymubx"]
-
-[ext_resource type="PackedScene" uid="uid://sbt8r6ckfb54" path="res://scenes/platform.tscn" id="1_byowd"]
+[gd_scene load_steps=3 format=3 uid="uid://dfymgkljymubx"]
 
 [sub_resource type="GDScript" id="GDScript_iywne"]
 resource_name = "PlatformManager"
 script/source = "class_name PlatformManager extends Node
 
 ## Platform scene to spawn.
-@export var platform_scene: PackedScene
+@export var _platform_scene: PackedScene
+
+## Initial platform speed.
+@export var _initial_speed: float = 50
+
+## Platform overtime speed up value.
+@export var _increased_speed: float = 5
 
 ## Should the platforms moving.
 var is_moving: bool = false:
@@ -17,33 +21,14 @@ var is_moving: bool = false:
 			true: $SpeedupTimer.start()
 			false: $SpeedupTimer.stop()
 
-# Platform placement
-@export var _initial_speed: float = 50
-@export var _increased_speed: float = 5
-
+# Gap between platforms.
 @onready var _platform_gap: float = $SpawnActivator.global_position.y
+
+# Platform movement speed.
 @onready var _speed: float = _initial_speed
 
 # first platform
 var _first_platform: StaticBody2D
-
-## Mark 
-#var current_platform: StaticBody2D = null:
-	#set(new_platform):
-		#if new_platform == current_platform:
-			#return
-		#
-		#if new_platform != _first_platform:
-			#is_moving = true
-		#
-		#emit_signal('current_platform_changed', new_platform, current_platform)
-		#current_platform = new_platform
-		
-## signal
-#signal current_platform_changed(
-	#new_platform: StaticBody2D,
-	#old_platform: StaticBody2D,
-#)
 
 ## Prepare platforms to start a game.
 func reset() -> void:
@@ -62,25 +47,28 @@ func reset() -> void:
 	while platform_gap > 0:
 		_spawn_platform(Vector2($Lanes.next_lane.x, platform_gap))
 		platform_gap -= _platform_gap
-		
+
+
 # spawn single platform. 
 # default to randomly marked x position, top screen
 func _spawn_platform(
 	spawn_position: Vector2 = $Lanes.next_lane
 ) -> StaticBody2D:
-	assert(platform_scene, 'Platform scene not assigned!')
+	assert(_platform_scene, 'Platform scene not assigned!')
 	
-	var platform: StaticBody2D = platform_scene.instantiate()
+	var platform: StaticBody2D = _platform_scene.instantiate()
 	platform.global_position = spawn_position
 	platform.set_meta('new', true)
 	platform.add_to_group('platforms')
 	add_child(platform)
 	
 	return platform
-	
+
+
 func _process(delta: float) -> void:
 	if is_moving:
 		get_tree().call_group('platforms', 'move_local_y', delta * _speed)
+
 
 func _physics_process(delta: float) -> void:
 	var platform: StaticBody2D = $SpawnActivator.get_collider()
@@ -127,7 +115,6 @@ func reset() -> void:
 
 [node name="PlatformManager" type="Node"]
 script = SubResource("GDScript_iywne")
-platform_scene = ExtResource("1_byowd")
 metadata/speed = 0.0
 
 [node name="Lanes" type="Node" parent="."]

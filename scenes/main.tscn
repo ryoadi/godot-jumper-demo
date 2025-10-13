@@ -1,84 +1,117 @@
 [gd_scene load_steps=5 format=3 uid="uid://gwcketf6ntis"]
 
 [ext_resource type="PackedScene" uid="uid://dfymgkljymubx" path="res://scenes/platform_manager.tscn" id="1_o5qli"]
-
-[sub_resource type="GDScript" id="GDScript_lbhrr"]
-resource_name = "Main"
-script/source = "class_name Main extends Node
-
-enum GameState {
-	Menu,
-	Play,
-	GameOver,
-}
-@onready var state: GameState = GameState.Play:
-	set(value):
-		# handle exit state
-		match state:
-			GameState.Menu:
-				$MenuUI.hide()
-			GameState.Play:
-				pass
-			GameState.GameOver:
-				$GameOverUI.hide()
-		
-		# handle enter state
-		match value:
-			GameState.Menu:
-				$MenuUI.show()
-				$Game.preview()
-			GameState.Play:
-				$Game.start()
-			GameState.GameOver:
-				$GameOverUI.show()
-			
-		# update state
-		state = value
-"
+[ext_resource type="PackedScene" uid="uid://c4qo3nubwlfl5" path="res://scenes/player_manager.tscn" id="2_0wfyh"]
+[ext_resource type="PackedScene" uid="uid://sbt8r6ckfb54" path="res://scenes/platform.tscn" id="2_sugp2"]
 
 [sub_resource type="GDScript" id="GDScript_0wfyh"]
 resource_name = "Game"
 script/source = "extends Node
 
-## Start a game.
-func start() -> void:
-	$GameUI.show()
-	$Platforms.reset()
-	$Player.spawn()
-	
-# Preview the game.
-func preview() -> void:
-	$GameUI.hide()
-	$Platforms.reset()
-	$Platforms.is_moving = true
-	$Player.remove()
+enum GameState {
+	Play,
+	GameOver,
+}
+var _state: GameState:
+	set(value):
+		match _state:
+			GameState.Play:
+				$GameUI.hide()
+			GameState.GameOver:
+				$GameOverUI.hide()
+		
+		match value:
+			GameState.Play:
+				_height = 0
+				$GameUI.show()
+				$PlatformManager.reset()
+				$PlayerManager.spawn()
+			GameState.GameOver:
+				$GameOverUI/VBoxContainer/ScoreLabel.text = \"Height: %.1f m\" % (_height / 100.0)
+				$GameOverUI.show()
+				
+		_state = value
+
+
+var _height: float = 0:
+	set(value):
+		_height = value
+		$GameUI/ScoreLabel.text = \"%.1f m\" % (_height / 100.0)
+		
+
+func _ready() -> void:
+	_state = GameState.Play
+
+
+func _on_player_manager_current_platform_changed(distance: float) -> void:
+	_height += distance
+	if _height:
+		$PlatformManager.is_moving = true
+
+
+
+func _on_player_manager_player_fell_off() -> void:
+	_state = GameState.GameOver
+
+
+func _on_restart_button_button_up() -> void:
+	_state = GameState.Play
 "
 
-[sub_resource type="GDScript" id="GDScript_o5qli"]
-resource_name = "Player"
-script/source = "extends Node
-
-func spawn() -> void:
-	global_position = $SpawnMarker.global_position
-"
-
-[node name="Main" type="Node"]
-script = SubResource("GDScript_lbhrr")
-
-[node name="MenuUI" type="Node" parent="."]
-
-[node name="Game" type="Node" parent="."]
+[node name="GameManager" type="Node"]
 script = SubResource("GDScript_0wfyh")
 
-[node name="GameUI" type="Node" parent="Game"]
+[node name="PlatformManager" parent="." instance=ExtResource("1_o5qli")]
+_platform_scene = ExtResource("2_sugp2")
 
-[node name="PlatformManager" parent="Game" instance=ExtResource("1_o5qli")]
+[node name="PlayerManager" parent="." instance=ExtResource("2_0wfyh")]
 
-[node name="PlayerManager" type="Node" parent="Game"]
-script = SubResource("GDScript_o5qli")
+[node name="GameUI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="SpawnMarker" type="Marker2D" parent="Game/PlayerManager"]
-top_level = true
-position = Vector2(576, 512)
+[node name="ScoreLabel" type="Label" parent="GameUI"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 146.0
+offset_bottom = 87.0
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 48
+text = "0.0 m"
 
-[node name="GameOverUI" type="Node" parent="."]
+[node name="GameOverUI" type="Panel" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="GameOverUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScoreLabel" type="Label" parent="GameOverUI/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Height: 0.0 m"
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="GameOverUI/VBoxContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "RESTART"
+
+[connection signal="current_platform_changed" from="PlayerManager" to="." method="_on_player_manager_current_platform_changed"]
+[connection signal="player_fell_off" from="PlayerManager" to="." method="_on_player_manager_player_fell_off"]
+[connection signal="button_up" from="GameOverUI/VBoxContainer/RestartButton" to="." method="_on_restart_button_button_up"]

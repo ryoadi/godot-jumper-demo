@@ -1,0 +1,82 @@
+[gd_scene load_steps=4 format=3 uid="uid://cr88trrnav8tr"]
+
+[ext_resource type="Texture2D" uid="uid://cy83cuoanivkr" path="res://icon.svg" id="1_3vyb7"]
+
+[sub_resource type="GDScript" id="GDScript_sugp2"]
+resource_name = "Player"
+script/source = "extends CharacterBody2D
+
+## Movement speed.
+@export var speed: float = 300
+
+## Jump power.
+@export var jump_power: float = 300
+
+## Signal when player landed on a floor.
+signal landed
+
+var _landed: bool = false:
+	set(value):
+		match [_landed, value]:
+			[true, false]: $CoyoteTimer.start()
+			[false, true]: emit_signal('landed')
+			
+		_landed = value
+
+
+# Movement direction.
+var _direction: Vector2 = Vector2.ZERO:
+	set(value):
+		_direction = value.normalized()
+
+
+## Move to a specific direction.
+func move(direction: Vector2) -> void:
+	if direction == Vector2.LEFT or direction == Vector2.RIGHT:
+		_direction += direction
+
+
+## Stop move to a specific direction.		
+func move_stop(direction: Vector2) -> void:
+	if direction == Vector2.LEFT or direction == Vector2.RIGHT:
+		_direction -= direction
+		
+
+
+## Jump, if possible.
+func jump() -> void:
+	if _landed or not $CoyoteTimer.is_stopped():
+		velocity.y = -jump_power
+		$CoyoteTimer.stop()
+
+func _process(delta: float) -> void:
+	velocity.x = speed * _direction.x
+	if not _landed:
+		velocity += delta * get_gravity()
+	if _landed:
+		velocity.y = min(300, velocity.y + 300) 
+	
+	move_and_slide()
+
+func _physics_process(delta: float) -> void:
+	_landed = is_on_floor()
+"
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_jyhfs"]
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 2
+script = SubResource("GDScript_sugp2")
+metadata/_edit_group_ = true
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("1_3vyb7")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+scale = Vector2(3, 3)
+shape = SubResource("RectangleShape2D_jyhfs")
+
+[node name="CoyoteTimer" type="Timer" parent="."]
+wait_time = 0.3
+one_shot = true

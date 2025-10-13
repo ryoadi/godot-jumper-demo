@@ -19,7 +19,7 @@ func _physics_process(delta: float) -> void:
 	print_debug($Platforms._speed)
 "
 
-[node name="PlatformPlacement" type="Node"]
+[node name="PlatformManagerTest" type="Node"]
 script = SubResource("GDScript_7hi80")
 
-[node name="Platforms" parent="." instance=ExtResource("1_7hi80")]
+[node name="PlatformManager" parent="." instance=ExtResource("1_7hi80")]
