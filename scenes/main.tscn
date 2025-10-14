@@ -37,18 +37,20 @@ var _height: float = 0:
 	set(value):
 		_height = value
 		$GameUI/ScoreLabel.text = \"%.1f m\" % (_height / 100.0)
+		if _height > 0:
+			$PlatformManager.is_moving = true
 		
 
 func _ready() -> void:
 	$PlayerManager.init($Player)
 	_state = GameState.Play
 
-
-func _on_player_manager_current_platform_changed(distance: float) -> void:
-	_height += distance
-	if _height:
-		$PlatformManager.is_moving = true
-
+func _on_player_landed() -> void:
+	var collission: KinematicCollision2D = $Player.get_last_slide_collision()
+	if collission:
+		_height += $PlatformManager.update_current_platform(
+			collission.get_collider()
+			)
 
 
 func _on_player_manager_player_fell_off() -> void:
@@ -121,11 +123,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		_player.move(Vector2.RIGHT)
 	if event.is_action_released(\"move_right\"):
 		_player.move_stop(Vector2.RIGHT)
-
-func _on_player_landed() -> void:
-	var collission: KinematicCollision2D = _player.get_last_slide_collision()
-	if collission:
-		_current_platform = collission.get_collider()
 "
 
 [node name="GameManager" type="Node"]
@@ -136,8 +133,6 @@ _platform_scene = ExtResource("2_sugp2")
 
 [node name="PlayerManager" type="Node" parent="."]
 script = SubResource("GDScript_sugp2")
-
-[node name="Platforms" type="Node" parent="."]
 
 [node name="Player" parent="." instance=ExtResource("4_jyhfs")]
 position = Vector2(576, 520)
@@ -192,6 +187,6 @@ text = "RESTART"
 
 [connection signal="current_platform_changed" from="PlayerManager" to="." method="_on_player_manager_current_platform_changed"]
 [connection signal="player_fell_off" from="PlayerManager" to="." method="_on_player_manager_player_fell_off"]
-[connection signal="landed" from="Player" to="PlayerManager" method="_on_player_landed"]
+[connection signal="landed" from="Player" to="." method="_on_player_landed"]
 [connection signal="screen_exited" from="Player/VisibleOnScreenNotifier2D" to="PlayerManager" method="_on_player_screen_notifier_exited"]
 [connection signal="button_up" from="GameOverUI/VBoxContainer/RestartButton" to="." method="_on_restart_button_button_up"]

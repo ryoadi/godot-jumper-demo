@@ -29,10 +29,29 @@ var is_moving: bool = false:
 @onready var _speed: float = _initial_speed:
 	set(value):
 		_speed = value
-		get_tree().call_group('platforms', 'set_constant_linear_velocity', _speed)
+		get_tree().call_group('platforms', 'set_constant_linear_velocity', Vector2.DOWN * _speed)
 
 # first platform
 var _first_platform: StaticBody2D
+
+# Patform where to player stand. 
+var _current_platform: StaticBody2D:
+	set(new_platform):
+		var distance: float = 0
+		if new_platform == _current_platform:
+			return
+			
+		if _current_platform != null:
+			distance = max(
+				0,
+				_current_platform.global_position.y - new_platform.global_position.y,
+			) 
+		
+		_current_platform = new_platform
+		_last_platform_distance = distance
+		
+# distance calculation of last platform.
+var _last_platform_distance: float = 0
 
 ## Prepare platforms to start a game.
 func reset() -> void:
@@ -51,7 +70,10 @@ func reset() -> void:
 	while platform_gap > 0:
 		_spawn_platform(Vector2($Lanes.next_lane.x, platform_gap))
 		platform_gap -= _platform_gap
-
+		
+func update_current_platform(platform: StaticBody2D) -> float:
+	_current_platform = platform
+	return _last_platform_distance
 
 # spawn single platform. 
 # default to randomly marked x position, top screen
