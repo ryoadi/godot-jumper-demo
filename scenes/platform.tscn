@@ -1,4 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://sbt8r6ckfb54"]
+[gd_scene load_steps=3 format=3 uid="uid://sbt8r6ckfb54"]
+
+[ext_resource type="Texture2D" uid="uid://buujp2e0aab2p" path="res://Pixel Adventure 1/Free/Terrain/Terrain (16x16).png" id="1_ba0x2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_v4t87"]
 size = Vector2(256, 8)
@@ -11,9 +13,18 @@ shape = SubResource("RectangleShape2D_v4t87")
 one_way_collision = true
 
 [node name="ColorRect" type="ColorRect" parent="."]
+visible = false
 offset_left = -128.0
 offset_right = 128.0
 offset_bottom = 8.0
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
 rect = Rect2(-128, 0, 256, 8)
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, 3.1136374)
+scale = Vector2(5.565218, 1.9545448)
+texture = ExtResource("1_ba0x2")
+region_enabled = true
+region_rect = Rect2(272, 16, 48, 5)
+region_filter_clip_enabled = true

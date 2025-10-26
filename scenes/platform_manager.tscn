@@ -13,6 +13,8 @@ script/source = "class_name PlatformManager extends Node
 ## Platform overtime speed up value.
 @export var _increased_speed: float = 5
 
+signal speed_increased(new_speed: float)
+
 ## Should the platforms moving.
 var is_moving: bool = false:
 	set(value):
@@ -21,6 +23,7 @@ var is_moving: bool = false:
 		match value:
 			true: $SpeedupTimer.start()
 			false: $SpeedupTimer.stop()
+		emit_signal('speed_increased', _speed)
 
 # Gap between platforms.
 @onready var _platform_gap: float = $SpawnActivator.global_position.y
@@ -30,6 +33,9 @@ var is_moving: bool = false:
 	set(value):
 		_speed = value
 		get_tree().call_group('platforms', 'set_constant_linear_velocity', Vector2.DOWN * _speed)
+		emit_signal('speed_increased', _speed)
+		if _speed > 500:
+			$SpeedupTimer.stop()
 
 # first platform
 var _first_platform: StaticBody2D
@@ -105,8 +111,6 @@ func _physics_process(delta: float) -> void:
 
 func _on_speedup_timer_timeout() -> void:
 	_speed += _increased_speed
-	if _speed > 500:
-		$SpeedupTimer.stop()
 "
 
 [sub_resource type="GDScript" id="GDScript_133ji"]

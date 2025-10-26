@@ -1,8 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://gwcketf6ntis"]
+[gd_scene load_steps=8 format=3 uid="uid://gwcketf6ntis"]
 
 [ext_resource type="PackedScene" uid="uid://dfymgkljymubx" path="res://scenes/platform_manager.tscn" id="1_o5qli"]
+[ext_resource type="Texture2D" uid="uid://csgf48uy1ocvm" path="res://Pixel Adventure 1/Free/Background/Brown.png" id="1_tbgi4"]
 [ext_resource type="PackedScene" uid="uid://sbt8r6ckfb54" path="res://scenes/platform.tscn" id="2_sugp2"]
 [ext_resource type="PackedScene" uid="uid://cr88trrnav8tr" path="res://scenes/player.tscn" id="4_jyhfs"]
+[ext_resource type="AudioStream" uid="uid://ck3ofpmhieijs" path="res://brackeys_platformer_assets/music/time_for_adventure.mp3" id="4_tbgi4"]
 
 [sub_resource type="GDScript" id="GDScript_0wfyh"]
 resource_name = "Game"
@@ -26,6 +28,7 @@ var _state: GameState:
 				$GameUI.show()
 				$PlatformManager.reset()
 				$PlayerManager.spawn()
+				$Parallax2D.autoscroll = Vector2.ZERO
 			GameState.GameOver:
 				$GameOverUI/VBoxContainer/ScoreLabel.text = \"Height: %.1f m\" % (_height / 100.0)
 				$GameOverUI.show()
@@ -59,6 +62,11 @@ func _on_player_manager_player_fell_off() -> void:
 
 func _on_restart_button_button_up() -> void:
 	_state = GameState.Play
+
+
+func _on_platform_manager_speed_increased(new_speed: float) -> void:
+	if $PlatformManager.is_moving:
+		$Parallax2D.autoscroll = Vector2.DOWN * (new_speed / 2)
 "
 
 [sub_resource type="GDScript" id="GDScript_sugp2"]
@@ -128,6 +136,17 @@ func _unhandled_input(event: InputEvent) -> void:
 [node name="GameManager" type="Node"]
 script = SubResource("GDScript_0wfyh")
 
+[node name="Parallax2D" type="Parallax2D" parent="."]
+repeat_size = Vector2(0, 64)
+ignore_camera_scroll = true
+
+[node name="Sprite2D" type="TextureRect" parent="Parallax2D"]
+texture_repeat = 2
+offset_right = 1152.0
+offset_bottom = 648.0
+texture = ExtResource("1_tbgi4")
+stretch_mode = 1
+
 [node name="PlatformManager" parent="." instance=ExtResource("1_o5qli")]
 _platform_scene = ExtResource("2_sugp2")
 
@@ -185,6 +204,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "RESTART"
 
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_tbgi4")
+autoplay = true
+parameters/looping = true
+
+[connection signal="speed_increased" from="PlatformManager" to="." method="_on_platform_manager_speed_increased"]
 [connection signal="current_platform_changed" from="PlayerManager" to="." method="_on_player_manager_current_platform_changed"]
 [connection signal="player_fell_off" from="PlayerManager" to="." method="_on_player_manager_player_fell_off"]
 [connection signal="landed" from="Player" to="." method="_on_player_landed"]
