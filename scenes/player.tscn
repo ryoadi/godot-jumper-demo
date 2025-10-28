@@ -366,7 +366,8 @@ scale = Vector2(3, 3)
 shape = SubResource("RectangleShape2D_jyhfs")
 
 [node name="CoyoteTimer" type="Timer" parent="."]
-wait_time = 0.3
+process_callback = 0
+wait_time = 0.1
 one_shot = true
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
