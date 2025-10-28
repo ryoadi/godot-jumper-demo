@@ -13,6 +13,9 @@ script/source = "class_name PlatformManager extends Node
 ## Platform overtime speed up value.
 @export var _increased_speed: float = 5
 
+## Gap between platforms.
+@export var _platform_gap: float = 64
+
 signal speed_increased(new_speed: float)
 
 ## Should the platforms moving.
@@ -21,12 +24,15 @@ var is_moving: bool = false:
 		if is_moving == value: return
 		is_moving = value
 		match value:
-			true: $SpeedupTimer.start()
-			false: $SpeedupTimer.stop()
+			true: 
+				$SpeedupTimer.start()
+				$SpawnTimer.start(_platform_gap/_speed)
+			false: 
+				$SpeedupTimer.stop()
+				$SpawnTimer.stop()
+				
 		emit_signal('speed_increased', _speed)
 
-# Gap between platforms.
-@onready var _platform_gap: float = $SpawnActivator.global_position.y
 
 # Platform movement speed.
 @onready var _speed: float = _initial_speed:
@@ -76,6 +82,7 @@ func reset() -> void:
 	while platform_gap > 0:
 		_spawn_platform(Vector2($Lanes.next_lane.x, platform_gap))
 		platform_gap -= _platform_gap
+	_spawn_platform(Vector2($Lanes.next_lane.x, platform_gap))
 		
 func update_current_platform(platform: StaticBody2D) -> float:
 	_current_platform = platform
@@ -90,7 +97,6 @@ func _spawn_platform(
 	
 	var platform: StaticBody2D = _platform_scene.instantiate()
 	platform.global_position = spawn_position
-	platform.set_meta('new', true)
 	platform.add_to_group('platforms')
 	add_child(platform)
 	
@@ -102,15 +108,13 @@ func _process(delta: float) -> void:
 		get_tree().call_group('platforms', 'move_local_y', delta * _speed)
 
 
-func _physics_process(delta: float) -> void:
-	var platform: StaticBody2D = $SpawnActivator.get_collider()
-	if platform and platform.has_meta('new'):
-		_spawn_platform()
-		platform.remove_meta('new')
-
-
 func _on_speedup_timer_timeout() -> void:
 	_speed += _increased_speed
+
+
+func _on_spawn_timer_timeout() -> void:
+	_spawn_platform()
+	$SpawnTimer.start(_platform_gap/_speed)
 "
 
 [sub_resource type="GDScript" id="GDScript_133ji"]
@@ -168,10 +172,10 @@ position = Vector2(960, 0)
 [node name="FirstPlatformMarker" type="Marker2D" parent="."]
 position = Vector2(576, 576)
 
-[node name="SpawnActivator" type="RayCast2D" parent="."]
-position = Vector2(0, 64)
-target_position = Vector2(1152, 0)
-
 [node name="SpeedupTimer" type="Timer" parent="."]
 
+[node name="SpawnTimer" type="Timer" parent="."]
+one_shot = true
+
 [connection signal="timeout" from="SpeedupTimer" to="." method="_on_speedup_timer_timeout"]
+[connection signal="timeout" from="SpawnTimer" to="." method="_on_spawn_timer_timeout"]
