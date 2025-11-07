@@ -1,9 +1,5 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+dist/win
 *.tmp
-*.zip
-*.png
-*.wav
-*.ttf
-*.mp3
